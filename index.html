@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>星盘 · Astro Chart</title>
+<style>
+/* ===== FONTS ===== */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-deep: #0b0d1a;
+  --bg-card: #121530;
+  --gold: #d4a843;
+  --gold-dim: rgba(212,168,67,0.3);
+  --text-primary: #e8e6f0;
+  --text-secondary: #8b89a0;
+  --border: #1e2350;
+  --harmony: #4ade80;
+  --challenge: #f87171;
+  --accent-blue: #6366f1;
+}
+
+html { height: 100%; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100%;
+  line-height: 1.6;
+}
+
+/* ===== LAYOUT ===== */
+.app { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+.app-header {
+  text-align: center;
+  padding: 32px 0 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.app-header h1 {
+  font-family: 'Cinzel', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+}
+.app-header p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .main-grid { grid-template-columns: 1fr; }
+  .app-header h1 { font-size: 1.5rem; }
+}
+
+/* ===== CARD ===== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.card-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  color: var(--gold);
+  margin-bottom: 16px;
+  letter-spacing: 0.05em;
+}
+
+/* ===== FORM ===== */
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: 'Inter', sans-serif;
+  transition: border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn-generate {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--gold), #b8912f);
+  border: none;
+  border-radius: 8px;
+  color: #0b0d1a;
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: transform 0.15s, box-shadow 0.15s;
+  margin-top: 8px;
+}
+.btn-generate:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(212,168,67,0.35);
+}
+.btn-generate:active { transform: translateY(0); }
+
+.form-note {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* ===== RIGHT PANEL ===== */
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ===== CHART CONTAINER ===== */
+.chart-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.chart-container svg {
+  max-width: 100%;
+  height: auto;
+  transition: transform 2s ease;
+}
+.chart-container:hover svg {
+  transform: rotate(1deg);
+}
+.chart-placeholder {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 60px 20px;
+}
+
+/* ===== TABS ===== */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 8px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.tab-btn.active {
+  background: var(--gold-dim);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ===== TABLE ===== */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.data-table th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.data-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(30,35,80,0.4);
+}
+.data-table td.symbol { font-size: 1.2rem; }
+.data-table td.sign { color: var(--gold); font-weight: 500; }
+.data-table td.house { font-family: 'JetBrains Mono', monospace; }
+.data-table td.angle { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-secondary); }
+
+/* ===== CHAT ===== */
+.chat-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  max-height: 480px;
+}
+.chat-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Cinzel', serif;
+  font-size: 0.9rem;
+  color: var(--gold);
+}
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 200px;
+  max-height: 360px;
+}
+.chat-msg {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.chat-msg.bot {
+  align-self: flex-start;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+}
+.chat-msg.user {
+  align-self: flex-end;
+  background: rgba(212,168,67,0.12);
+  border: 1px solid var(--gold-dim);
+}
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.chat-suggestion {
+  padding: 5px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--gold);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Inter', sans-serif;
+}
+.chat-suggestion:hover {
+  background: var(--gold-dim);
+  border-color: var(--gold);
+}
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+.chat-input-row input {
+  flex: 1;
+  padding: 10px 12px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: 'Inter', sans-serif;
+}
+.chat-input-row input:focus { outline: none; border-color: var(--gold); }
+.chat-send {
+  padding: 10px 16px;
+  background: var(--gold);
+  border: none;
+  border-radius: 8px;
+  color: #0b0d1a;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: opacity 0.15s;
+}
+.chat-send:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+<div class='app'>
+  <header class='app-header'>
+    <h1>&#10025; 星盘 · Western Astrology Chart</h1>
+    <p>生成你的出生星盘，解读宇宙密码</p>
+  </header>
+
+  <div class='main-grid'>
+    <!-- LEFT COLUMN: FORM -->
+    <div class='card' id='formCard'>
+      <div class='card-title'>出生信息</div>
+      <div class='form-group'>
+        <label>姓名 / 昵称</label>
+        <input type='text' id='fName' placeholder='输入你的名字' value=''>
+      </div>
+      <div class='form-row'>
+        <div class='form-group'>
+          <label>出生日期</label>
+          <input type='date' id='fDate' value='1995-06-15'>
+        </div>
+        <div class='form-group'>
+          <label>出生时间</label>
+          <input type='time' id='fTime' value='14:30' step='1'>
+        </div>
+      </div>
+      <div class='form-row'>
+        <div class='form-group'>
+          <label>经度</label>
+          <input type='number' id='fLng' value='116.40' step='any'>
+        </div>
+        <div class='form-group'>
+          <label>纬度</label>
+          <input type='number' id='fLat' value='39.90' step='any'>
+        </div>
+      </div>
+      <div class='form-group'>
+        <label>宫位制</label>
+        <select id='fHouseSys'>
+          <option value='placidus' selected>Placidus 普拉西度</option>
+          <option value='wholeSign'>Whole Sign 整宫制</option>
+          <option value='equal'>Equal 等宫制</option>
+          <option value='koch'>Koch 科赫</option>
+        </select>
+      </div>
+      <button class='btn-generate' onclick='onGenerate()'>&#10025; 生成星盘</button>
+      <p class='form-note'>时间使用本地时间，自动转换为世界时</p>
+    </div>
+
+    <!-- RIGHT COLUMN: CHART + TABS + CHAT -->
+    <div class='right-panel'>
+      <!-- CHART WHEEL -->
+      <div class='chart-container' id='chartContainer'>
+        <div class='chart-placeholder' id='chartPlaceholder'>
+          &#10025; 填写出生信息并点击「生成星盘」<br>生成你的专属星盘
+        </div>
+        <svg id='chartSvg' viewBox='0 0 380 380' width='380' height='380' style='display:none'></svg>
+      </div>
+
+      <!-- TABS -->
+      <div class='card' id='dataCard' style='display:none'>
+        <div class='tab-bar'>
+          <button class='tab-btn active' data-tab='planets'>行星表</button>
+          <button class='tab-btn' data-tab='houses'>宫位</button>
+          <button class='tab-btn' data-tab='aspects'>相位</button>
+        </div>
+        <div class='tab-content active' id='tab-planets'>
+          <table class='data-table'><thead><tr><th></th><th>行星</th><th>星座</th><th>度数</th><th>宫位</th></tr></thead><tbody id='planetTableBody'></tbody></table>
+        </div>
+        <div class='tab-content' id='tab-houses'>
+          <table class='data-table'><thead><tr><th>宫位</th><th>宫头星座</th><th>宫头度数</th></tr></thead><tbody id='houseTableBody'></tbody></table>
+        </div>
+        <div class='tab-content' id='tab-aspects'>
+          <table class='data-table'><thead><tr><th>行星A</th><th>行星B</th><th>相位</th><th>容许度</th></tr></thead><tbody id='aspectTableBody'></tbody></table>
+        </div>
+      </div>
+
+      <!-- CHAT -->
+      <div class='chat-container' id='chatContainer'>
+        <div class='chat-header'>&#10025; AI 占星师</div>
+        <div class='chat-messages' id='chatMessages'>
+          <div class='chat-msg bot'>
+            你好！我是你的AI占星师 &#10025;<br>
+            填写出生信息并点击「生成星盘」后，我就可以为你解读星盘了。<br><br>
+            你也可以先问我一些占星知识，比如「什么是上升星座？」「月亮星座代表什么？」
+          </div>
+        </div>
+        <div class='chat-input-row'>
+          <input type='text' id='chatInput' placeholder='输入你的问题...' onkeydown='onChatKeydown(event)'>
+          <button class='chat-send' onclick='sendChat()'>发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================================================================
+   ASTROLOGY CHART CALCULATOR + AI CHAT — self-contained single HTML
+   ================================================================ */
+
+// ──────────────────────────────────────────────
+// CONSTANTS
+// ──────────────────────────────────────────────
+const ZODIAC_SIGNS = [
+  { name: '白羊座', en: 'Aries', symbol: '♈', element: 'fire', modality: 'cardinal', start: 0 },
+  { name: '金牛座', en: 'Taurus', symbol: '♉', element: 'earth', modality: 'fixed', start: 30 },
+  { name: '双子座', en: 'Gemini', symbol: '♊', element: 'air', modality: 'mutable', start: 60 },
+  { name: '巨蟹座', en: 'Cancer', symbol: '♋', element: 'water', modality: 'cardinal', start: 90 },
+  { name: '狮子座', en: 'Leo', symbol: '♌', element: 'fire', modality: 'fixed', start: 120 },
+  { name: '处女座', en: 'Virgo', symbol: '♍', element: 'earth', modality: 'mutable', start: 150 },
+  { name: '天秤座', en: 'Libra', symbol: '♎', element: 'air', modality: 'cardinal', start: 180 },
+  { name: '天蝎座', en: 'Scorpio', symbol: '♏', element: 'water', modality: 'fixed', start: 210 },
+  { name: '射手座', en: 'Sagittarius', symbol: '♐', element: 'fire', modality: 'mutable', start: 240 },
+  { name: '摩羯座', en: 'Capricorn', symbol: '♑', element: 'earth', modality: 'cardinal', start: 270 },
+  { name: '水瓶座', en: 'Aquarius', symbol: '♒', element: 'air', modality: 'fixed', start: 300 },
+  { name: '双鱼座', en: 'Pisces', symbol: '♓', element: 'water', modality: 'mutable', start: 330 }
+];
+
+const PLANETS = [
+  { name: 'Sun', symbol: '☉', vsop: 'sun' },
+  { name: 'Moon', symbol: '☽', vsop: 'moon' },
+  { name: 'Mercury', symbol: '☿', vsop: 'mercury' },
+  { name: 'Venus', symbol: '♀', vsop: 'venus' },
+  { name: 'Mars', symbol: '♂', vsop: 'mars' },
+  { name: 'Jupiter', symbol: '♃', vsop: 'jupiter' },
+  { name: 'Saturn', symbol: '♄', vsop: 'saturn' },
+  { name: 'Uranus', symbol: '♅', vsop: 'uranus' },
+  { name: 'Neptune', symbol: '♆', vsop: 'neptune' },
+  { name: 'Pluto', symbol: '♇', vsop: 'pluto' },
+  { name: 'NorthNode', symbol: '☊', vsop: 'node' }
+];
+
+const ASPECT_TYPES = [
+  { name: '合相', type: 'conjunction', angle: 0, orb: 8, nature: 'neutral' },
+  { name: '六合', type: 'sextile', angle: 60, orb: 5, nature: 'harmonious' },
+  { name: '刑', type: 'square', angle: 90, orb: 6, nature: 'challenging' },
+  { name: '三合', type: 'trine', angle: 120, orb: 7, nature: 'harmonious' },
+  { name: '冲', type: 'opposition', angle: 180, orb: 7, nature: 'challenging' }
+];
+
+const ELEMENT_NAMES = { fire: '火', earth: '土', air: '风', water: '水' };
+
+let currentChartData = null;
+
+// ──────────────────────────────────────────────
+// PLANET ENGINE
+// ──────────────────────────────────────────────
+const PlanetEngine = (function() {
+  const D2R = Math.PI / 180;
+  const R2D = 180 / Math.PI;
+
+  function normalizeDeg(deg) {
+    let d = deg % 360;
+    if (d < 0) d += 360;
+    return d;
+  }
+
+  function julianDay(year, month, day, hour, min, sec) {
+    if (month <= 2) { year -= 1; month += 12; }
+    const a = Math.floor(year / 100);
+    const b = 2 - a + Math.floor(a / 4);
+    const jd = Math.floor(365.25 * (year + 4716))
+             + Math.floor(30.6001 * (month + 1))
+             + day + b - 1524.5;
+    return jd + (hour + min / 60 + sec / 3600) / 24;
+  }
+
+  function sunPosition(jd) {
+    const T = (jd - 2451545.0) / 36525;
+    const L0 = normalizeDeg(280.46646 + 36000.76983 * T + 0.0003032 * T * T);
+    const M = normalizeDeg(357.52911 + 35999.05029 * T - 0.0001537 * T * T);
+    const C = (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(M * D2R)
+            + (0.019993 - 0.000101 * T) * Math.sin(2 * M * D2R)
+            + 0.000289 * Math.sin(3 * M * D2R);
+    return { longitude: normalizeDeg(L0 + C), distance: 1.0 };
+  }
+
+  function moonPosition(jd) {
+    const T = (jd - 2451545.0) / 36525;
+    const Lp = normalizeDeg(218.3164477 + 481267.88123421 * T - 0.0015786 * T * T);
+    const D = normalizeDeg(297.8501921 + 445267.1114034 * T - 0.0018819 * T * T);
+    const M = normalizeDeg(357.5291092 + 35999.0502909 * T - 0.0001536 * T * T);
+    const Mp = normalizeDeg(134.9633964 + 477198.8675055 * T + 0.0087414 * T * T);
+    const F = normalizeDeg(93.2720950 + 483202.0175233 * T - 0.0036539 * T * T);
+    const dLon = 6.289 * Math.sin(Mp * D2R)
+               + 1.274 * Math.sin((2 * D - Mp) * D2R)
+               + 0.658 * Math.sin(2 * D * D2R)
+               + 0.214 * Math.sin(2 * Mp * D2R)
+               - 0.186 * Math.sin(M * D2R)
+               - 0.114 * Math.sin(2 * F * D2R)
+               + 0.059 * Math.sin((2 * D - 2 * Mp) * D2R)
+               + 0.057 * Math.sin((2 * D - M - Mp) * D2R)
+               + 0.053 * Math.sin((2 * D + Mp) * D2R)
+               + 0.046 * Math.sin((2 * D - M) * D2R);
+    return { longitude: normalizeDeg(Lp + dLon), distance: 385000 };
+  }
+
+  const VSOP = {
+    mercury: {
+      L: [
+        [4.4026088424, 26087.9031415742, 1.0],
+        [3.0504716251, 52175.8062831484, 0.001],
+        [0.9256078038, 78263.7094247226, 0.0005]
+      ],
+      C: [[0, 26087.9031415742, 0.0035], [0, 52175.8062831484, 0.0007]]
+    },
+    venus: {
+      L: [
+        [3.1761466969, 10213.2855462110, 1.0],
+        [0.5705770005, 20426.5710924220, 0.0008],
+        [0.1169980275, 30639.8566386330, 0.0003]
+      ],
+      C: [[0, 10213.2855462110, 0.0002]]
+    },
+    mars: {
+      L: [
+        [6.2034809130, 3340.6124266998, 1.0],
+        [0.3494959686, 6681.2248533996, 0.008],
+        [0.0954715510, 10022.8172802344, 0.003]
+      ],
+      C: [[0, 3340.6124266998, 0.04], [0, 6681.2248533996, 0.002]]
+    },
+    jupiter: {
+      L: [
+        [0.5995464974, 529.6909650946, 1.0],
+        [0.4855697884, 1059.3819301892, 0.02],
+        [0.1145135961, 1588.8478952838, 0.004]
+      ],
+      C: [[0, 529.6909650946, 0.007], [0, 1059.3819301892, 0.002]]
+    },
+    saturn: {
+      L: [
+        [0.8730040700, 213.2990954380, 1.0],
+        [0.1042203805, 426.5981908760, 0.02],
+        [0.0345803690, 639.8972863140, 0.005]
+      ],
+      C: [[0, 213.2990954380, 0.01], [0, 426.5981908760, 0.003]]
+    }
+  };
+
+  function computeVSOP(jd, planetKey) {
+    const T = (jd - 2451545.0) / 365250;
+    const data = VSOP[planetKey];
+    if (!data) return null;
+    let L = 0;
+    for (const [A, B, Cmag] of data.L) {
+      L += Cmag * Math.cos((A + B * T) % (2 * Math.PI));
+    }
+    if (data.C && data.C.length > 0) {
+      for (const [A, B, Cmag] of data.C) {
+        L += Cmag * Math.cos(2 * ((A + B * T) % (2 * Math.PI)));
+      }
+    }
+    return { longitude: normalizeDeg(L * R2D), distance: 1.0 };
+  }
+
+  function outerPlanetPosition(jd, planetName) {
+    const T = (jd - 2451545.0) / 36525;
+    const elements = {
+      uranus: { L: 314.055005, rate: 428.4669983, a: 19.2184, e: 0.046381, I: 0.773196, W: 173.005159, w: 74.005947 },
+      neptune: { L: 304.348665, rate: 218.4862002, a: 30.110387, e: 0.009456, I: 1.769953, W: 48.123691, w: 131.784057 },
+      pluto: { L: 238.929038, rate: 144.9583333, a: 39.482117, e: 0.248808, I: 17.141748, W: 110.30139, w: 110.30139 }
+    };
+    const el = elements[planetName];
+    if (!el) return null;
+    const Lmean = normalizeDeg(el.L + el.rate * T);
+    const peri = normalizeDeg(el.w + el.rate * T * 0.001);
+    const M = normalizeDeg(Lmean - peri);
+    const e = el.e;
+    const C = (2 * e - 0.25 * e * e * e) * Math.sin(M * D2R)
+            + (1.25 * e * e) * Math.sin(2 * M * D2R)
+            + (13/12 * e * e * e) * Math.sin(3 * M * D2R);
+    return { longitude: normalizeDeg(Lmean + C * R2D), distance: el.a };
+  }
+
+  function meanNode(jd) {
+    const T = (jd - 2451545.0) / 36525;
+    const node = normalizeDeg(125.044522 - 1934.136261 * T + 0.0020708 * T * T);
+    return { longitude: normalizeDeg(360 - node), distance: 1.0 };
+  }
+
+  function planetPosition(jd, planetName) {
+    switch (planetName) {
+      case 'sun': return sunPosition(jd);
+      case 'moon': return moonPosition(jd);
+      case 'mercury': return computeVSOP(jd, 'mercury');
+      case 'venus': return computeVSOP(jd, 'venus');
+      case 'mars': return computeVSOP(jd, 'mars');
+      case 'jupiter': return computeVSOP(jd, 'jupiter');
+      case 'saturn': return computeVSOP(jd, 'saturn');
+      case 'uranus': return outerPlanetPosition(jd, 'uranus');
+      case 'neptune': return outerPlanetPosition(jd, 'neptune');
+      case 'pluto': return outerPlanetPosition(jd, 'pluto');
+      case 'node': return meanNode(jd);
+      default: return null;
+    }
+  }
+
+  function obliquity(jd) {
+    const T = (jd - 2451545.0) / 36525;
+    return 23.43929111 - 0.0130041667 * T - 1.638e-7 * T * T + 5.0361e-7 * T * T * T;
+  }
+
+  function ascendant(jd, lat, lng) {
+    const T = (jd - 2451545.0) / 36525;
+    const GMST = normalizeDeg(280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T * T);
+    const LST = normalizeDeg(GMST + lng);
+    const eps = obliquity(jd) * D2R;
+    const latR = lat * D2R;
+    const ascR = Math.atan2(
+      Math.cos(LST * D2R),
+      -(Math.sin(eps) * Math.tan(latR) + Math.cos(eps) * Math.sin(LST * D2R))
+    );
+    return normalizeDeg(ascR * R2D);
+  }
+
+  function housesPlacidus(jd, lat, lng) {
+    const eps = obliquity(jd) * D2R;
+    const latR = lat * D2R;
+    const T = (jd - 2451545.0) / 36525;
+    const GMST = normalizeDeg(280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T * T);
+    const RAMC = normalizeDeg(GMST + lng);
+
+    // MC: ecliptic longitude at intersection of local meridian and ecliptic
+    const mc = normalizeDeg(Math.atan2(Math.sin(RAMC * D2R), Math.cos(eps) * Math.cos(RAMC * D2R)) * R2D);
+    // ASC
+    const asc = ascendant(jd, lat, lng);
+
+    const cusps = new Array(13).fill(0);  // 1-indexed for clarity
+    cusps[1] = asc;                        // 1st house
+    cusps[10] = mc;                        // 10th house (MC)
+    cusps[7] = normalizeDeg(asc + 180);    // 7th house (DSC)
+    cusps[4] = normalizeDeg(mc + 180);     // 4th house (IC)
+
+    // Standard Placidus: all intermediate cusps use diurnal semi-arc
+    // Cusp 12: RA = RAMC + 30, corrected by 1/3 SA_day → iterate
+    // Cusp 11: RA = RAMC + 60, corrected by 2/3 SA_day → iterate
+    // Cusp  2: RA = RAMC + 120, corrected by 2/3 SA_day → iterate
+    // Cusp  3: RA = RAMC + 150, corrected by 1/3 SA_day → iterate
+    // Then: 5=11+180, 6=12+180, 8=2+180, 9=3+180
+
+    const OFFSETS_RA = { 12: 30, 11: 60, 2: 120, 3: 150 };
+    const FACTORS    = { 12: 1/3, 11: 2/3, 2: 2/3, 3: 1/3 };
+
+    for (const h of [12, 11, 2, 3]) {
+      let raDeg = normalizeDeg(RAMC + OFFSETS_RA[h]);
+      for (let iter = 0; iter < 5; iter++) {
+        const raRad = raDeg * D2R;
+        const decl = Math.asin(Math.sin(eps) * Math.sin(raRad));
+        const ad = Math.asin(Math.tan(latR) * Math.tan(decl)) * R2D;
+        if (isNaN(ad)) break;
+        const saDay = 90 + ad;
+        raDeg = normalizeDeg(RAMC + OFFSETS_RA[h] - FACTORS[h] * saDay);
+      }
+      // Convert converged RA to ecliptic longitude
+      const raRad = raDeg * D2R;
+      const decl = Math.asin(Math.sin(eps) * Math.sin(raRad));
+      const lon = Math.atan2(
+        Math.sin(raRad) * Math.cos(eps) + Math.tan(decl) * Math.sin(eps),
+        Math.cos(raRad)
+      );
+      cusps[h] = normalizeDeg(lon * R2D);
+    }
+
+    // Oppositions
+    cusps[5] = normalizeDeg(cusps[11] + 180);
+    cusps[6] = normalizeDeg(cusps[12] + 180);
+    cusps[8] = normalizeDeg(cusps[2] + 180);
+    cusps[9] = normalizeDeg(cusps[3] + 180);
+
+    return cusps.slice(1); // return 0-indexed: [1,2,...,12]
+  }
+
+  function housesWholeSign(jd, lat, lng) {
+    const asc = ascendant(jd, lat, lng);
+    // 1st house cusp = 0° of the sign containing the ASC
+    const ascSignStart = Math.floor(asc / 30) * 30;
+    const cusps = [];
+    for (let i = 0; i < 12; i++) {
+      cusps.push(normalizeDeg(ascSignStart + i * 30));
+    }
+    return cusps;
+  }
+
+  function housesEqual(jd, lat, lng) {
+    const asc = ascendant(jd, lat, lng);
+    const cusps = [];
+    for (let i = 0; i < 12; i++) {
+      cusps.push(normalizeDeg(asc + i * 30));
+    }
+    return cusps;
+  }
+
+  function houses(jd, lat, lng, houseSystem) {
+    switch ((houseSystem || 'placidus').toLowerCase()) {
+      case 'wholesign': return housesWholeSign(jd, lat, lng);
+      case 'equal': return housesEqual(jd, lat, lng);
+      case 'koch': return housesEqual(jd, lat, lng); // fallback — Koch not yet implemented
+      case 'placidus':
+      default: return housesPlacidus(jd, lat, lng);
+    }
+  }
+
+  return { julianDay, sunPosition, moonPosition, planetPosition, meanNode, houses, ascendant, normalizeDeg, D2R, R2D };
+})();
+
+// ──────────────────────────────────────────────
+// ASTROLOGY ENGINE
+// ──────────────────────────────────────────────
+function getSignInfo(lon) {
+  const deg = PlanetEngine.normalizeDeg(lon);
+  const signIndex = Math.floor(deg / 30);
+  return {
+    sign: ZODIAC_SIGNS[signIndex],
+    signIndex: signIndex,
+    degreeInSign: +(deg - signIndex * 30).toFixed(2),
+    longitude: deg
+  };
+}
+
+function findHouse(lon, cusps) {
+  for (let i = 0; i < 12; i++) {
+    const start = cusps[i];
+    const end = cusps[(i + 1) % 12];
+    if (start <= end) {
+      if (lon >= start && lon < end) return i + 1;
+    } else {
+      if (lon >= start || lon < end) return i + 1;
+    }
+  }
+  return 1;
+}
+
+function calculateAspects(positions) {
+  const aspects = [];
+  const planetKeys = Object.keys(positions);
+  for (let i = 0; i < planetKeys.length; i++) {
+    for (let j = i + 1; j < planetKeys.length; j++) {
+      const a = positions[planetKeys[i]];
+      const b = positions[planetKeys[j]];
+      const diff = PlanetEngine.normalizeDeg(Math.abs(a.longitude - b.longitude));
+      const angle = diff > 180 ? 360 - diff : diff;
+      for (const aspectType of ASPECT_TYPES) {
+        const orb = Math.abs(angle - aspectType.angle);
+        if (orb <= aspectType.orb) {
+          aspects.push({
+            planetA: planetKeys[i],
+            planetB: planetKeys[j],
+            aspectType: aspectType.name,
+            aspectNature: aspectType.nature,
+            angle: +angle.toFixed(2),
+            orb: +orb.toFixed(2)
+          });
+          break;
+        }
+      }
+    }
+  }
+  return aspects;
+}
+
+function calculateChart(birthData) {
+  const { year, month, day, hour, min, sec, lat, lng, houseSystem } = birthData;
+  const tzOffsetHours = lng / 15;
+  const utHour = hour - tzOffsetHours;
+  const utTotalHours = day * 24 + utHour;
+  const utDay = Math.floor(utTotalHours / 24);
+  const utHourOfDay = utTotalHours - utDay * 24;
+
+  const jd = PlanetEngine.julianDay(year, month, utDay, utHourOfDay, min, sec);
+
+  const cusps = PlanetEngine.houses(jd, lat, lng, houseSystem);
+  const asc = cusps[0];
+
+  const positions = {};
+  for (const planet of PLANETS) {
+    try {
+      const pos = PlanetEngine.planetPosition(jd, planet.vsop);
+      if (pos && pos.longitude != null) {
+        positions[planet.name] = {
+          longitude: PlanetEngine.normalizeDeg(pos.longitude),
+          name: planet.name,
+          symbol: planet.symbol
+        };
+      }
+    } catch (e) {
+      console.warn('Failed to calculate position for ' + planet.name + ':', e);
+    }
+  }
+
+  const planetEntries = Object.values(positions).map(p => {
+    const signInfo = getSignInfo(p.longitude);
+    const house = findHouse(p.longitude, cusps);
+    return {
+      ...p,
+      sign: signInfo.sign,
+      signIndex: signInfo.signIndex,
+      degreeInSign: signInfo.degreeInSign,
+      house: house
+    };
+  });
+
+  const houseEntries = cusps.map((cusp, i) => {
+    const signInfo = getSignInfo(cusp);
+    return { number: i + 1, cuspLongitude: cusp, sign: signInfo.sign, degreeInSign: signInfo.degreeInSign };
+  });
+
+  const aspects = calculateAspects(positions);
+
+  const elementCounts = { fire: 0, earth: 0, air: 0, water: 0 };
+  for (const entry of planetEntries) {
+    if (entry.sign) {
+      elementCounts[entry.sign.element] = (elementCounts[entry.sign.element] || 0) + 1;
+    }
+  }
+
+  return { jd, asc, cusps, planetEntries, houseEntries, aspects, elementCounts, positions };
+}
+
+// ──────────────────────────────────────────────
+// KNOWLEDGE BASE
+// ──────────────────────────────────────────────
+const KnowledgeBase = {
+  planetInSign: {
+    Sun: {
+      0: `你的太阳白羊赋予你开拓者的灵魂。你不怕做第一个吃螃蟹的人，行动迅速决断，但也容易三分钟热度。你的意志力像一团烈火——点燃得快，需要持续的新挑战来保持燃烧。在人际关系中，你坦率直接，讨厌拐弯抹角。白羊太阳是战士的原型：勇敢、纯粹、但有时也会莽撞。你的核心驱动力是「我先行」，生命因不断开创而充满活力。`,
+      1: `太阳金牛是你内在的定海神针。你靠稳定、耐心和实际来发光——不是那种夺目的光，而是持久温暖的光芒，像壁炉里的火焰。你拥抱感官愉悦，美食、音乐、质感都能给你安全感和满足感。你对价值极为敏锐，在金钱、关系乃至时间上都有自己的节奏。挑战在于克服对变化的抗拒——有时候放下执念，反而能拥有更多。`,
+      2: `太阳双子让你拥有一颗永不静止的好奇心。信息是你的氧气——你不能不交流、不学习、不吸收新知。你的心智像蝴蝶，轻盈地在不同话题间飞舞。你善变却从不无趣，沟通能力是你的超能力。挑战在于深度——你需要偶尔停下来，把散落的碎片拼成完整的图画。你的太阳说：「世界如此有趣，为何只选一种活法？」`,
+      3: `太阳巨蟹将情感内核放在生命的中央。家、根源、安全感是你永恒的命题。你像月亮般善变——情绪潮汐来去，但你的直觉精准得出奇。滋养他人是你的本能，你也渴望被人守护。你的外壳看似坚硬，里面其实住着一个温柔的灵魂。挑战是学会在付出和自我保护间找到平衡——你不必承载所有人的情绪才能被爱。`,
+      4: `太阳狮子就是要被看见、被认可。你的光芒天生耀眼，你渴望舞台——不一定是字面意义上的，而是在你选择的领域成为中心。创造力和骄傲是你内在的发动机。慷慨、忠诚、保护欲强，你像国王守护领地般守护所爱之人。挑战在于：骄傲的另一面是脆弱的自尊。学会在没有掌声时也同样热爱自己——这才是真正的王者。`,
+      5: `太阳处女将你的天赋指向精微之处。你的眼睛看到别人忽略的细节，你的心智本能地分析、拆解、优化。服务是你表达爱的方式——把一件事做到极致，把一个问题彻底解决。你对自己严格，有时过于挑剔。但你的太阳在说：「万物皆可更好，而我希望成为让事情变好的人。」学会欣赏「足够好」，也是你灵魂的功课。`,
+      6: `太阳天秤将和谐与美作为人生核心命题。你天生理解这两个字——不是肤浅的美，而是平衡之美、关系之美、公平之美。你在关系中定义自己，在镜子中看清自己。永远在权衡，永远在寻找那个完美的中点。挑战在于决策——你害怕选错，所以迟迟不选。但请记住，天秤太阳的智慧在于：有时候不完美的平衡，比僵持的完美更有生命力。`,
+      7: `太阳天蝎赋予你深不可测的灵魂之眼。你穿透表面，直抵本质——在别人看到结局的地方，你看到转化。你的情感不是浅浅的小溪，而是深渊下的暗流。你拥有惊人的意志和再生能力，每次跌倒都能以更强的姿态重生。忠诚是你最大的美德，背叛是你最不能容忍的事。挑战是学会信任——不让控制欲和疑心夺走值得珍视的关系。`,
+      8: `太阳射手为你的灵魂装上了永不停止的翅膀。你的意义不藏在内心，而在远方——下一本书、下一次旅行、下一个答案。哲学、宗教、异国文化是你天然的磁场。你喜欢宏观叙事，细节和琐碎让你窒息。乐观是你最大的武器，但盲目的乐观也有风险。你的太阳在说：「活着就是为了探索，生命本身就是一场了不起的冒险。」`,
+      9: `太阳摩羯将责任和成就写进你的灵魂密码。你比别人更早懂得规矩、结构和社会期待——并选择参与其中，甚至成为规则的制定者。坚韧是你的底色，时间站在你这一边。你不需要马上被看见，因为你知道真正的成果需要岁月打磨。挑战是在攀登的过程中不要遗忘内心真实的渴望——山顶的风景固然壮丽，但你沿途失去的自己同样珍贵。`,
+      10: `太阳水瓶让你成为人群中独特的存在。你天生站在未来看现在——社会的不公、团体的规则、传统的束缚在你眼里都值得被重新审视。你有打破框架的冲动，也需要志同道合的群体。冷静的外表下，是对人类命运的真切关怀。挑战在于傲慢——你的视角超前，但并不意味着普通人的经验一文不值。学会在不被理解时依然温和，是你太阳的修炼。`,
+      11: `太阳双鱼为你打开了一扇通往无限的窗。你的边界感天然模糊——你能感知周围的能量、情绪、甚至他人的心声。这份敏感是天赋，也是负担。创造力是你的出口，艺术、音乐、灵性是你灵魂的语言。你最大的力量在于慈悲——你能理解所有人，因为某种意义上你就是所有人。挑战是学习「设限」——没有边界的大海，也会迷失自己的方向。`
+    },
+    Moon: {
+      0: `月亮白羊让你拥有闪电般的情绪反应——来得快，去得也快。小时候你可能是个急脾气的孩子，一言不合就爆发，但转身就忘了为什么生气。你的情感安全感来自独立和行动，你需要空间做自己。在亲密关系中，你渴望激情和刺激，平淡让你窒息。挑战是学会在愤怒时暂停——不是压抑，是选择更智慧的表达方式。`,
+      1: `月亮金牛是你的情感锚。物质安稳是你情绪安全感的重要来源——一份好工作、一个舒适的家、固定的生活节奏都能让你心安。你在关系中稳定、忠诚，不轻易动心，但一旦认定就非常执着。情绪方面，你不喜欢被催促——消化感受需要时间的沉淀。美食、美好的物件都能抚慰你的灵魂。挑战是适度放手——安全感不能完全建立在外部拥有上。`,
+      2: `月亮双子让你的情绪像城市里不停穿梭的车流。你需要表达，需要把感受拿出来说、写、聊——沉默让你焦虑。小时候你可能是个「小话唠」，长大后则从阅读和学习中获得情绪慰藉。多变意味着你不太记仇，但也可能不够深入。你的情感需要智力的参与——能和你聊得来的人才能走进你心里。挑战是区分「思考感受」和「真正感受它」。`,
+      3: `月亮巨蟹是将情感根植于记忆和归属。家是你最柔软的角落——妈妈的拥抱、童年的味道、一张旧照片都能触动你最深处。你的共情力惊人，像一块海绵吸收身边人的情绪。在关系中，你既是滋养者也是需要被滋养的孩子。你的情绪潮汐有规律可循——了解它，顺应它，而不是对抗它。挑战是避免情绪绑架——你的感受很重要，但它不能定义全局。`,
+      4: `月亮狮子让你在感情中从不低调。你需要被看见、被欣赏、被赞美——这不是虚荣，是你情感养分的来源。你爱得热烈、骄傲，讨厌被忽视。小时候你可能渴望成为众人瞩目的孩子，成年后在亲密关系中期待被当作独一无二的存在。你的慷慨无人能比——当你爱一个人，你会给他们全世界。挑战是学会接受平凡——不是每时每刻都需要光芒万丈。`,
+      5: `月亮处女告诉你的灵魂：秩序带来平静。整洁的环境、有条理的日程、有逻辑的关系，这些让你感到安全。你的情感表达克制而务实——用行动而不是言语来证明在乎。你可能对自己很苛刻，负面情绪来临时第一反应是「我应该做得更好」。你从小被要求「懂事」，但这不意味你不能脆弱。挑战是自我接纳——偶尔的混乱和不完美也是人性的一部分。`,
+      6: `月亮天秤让你的情感世界围绕着关系旋转。你天生需要陪伴——独处对你来说可能不是享受而是挑战。你极度在意和谐，害怕冲突，有时为了维持表面的平静而牺牲自己的真实感受。你的审美和品味是你情感生活中的重要部分——美好的人在美好的环境中，这就是你的理想。挑战是学会直面分歧——真正的和谐不是在沉默中妥协，而是在理解中达成。`,
+      7: `月亮天蝎让你拥有最深不可测的情感世界。你的情绪强度不是人人接得住的——爱就是全部，恨就是断绝。你极度敏锐，能察觉别人隐藏的情绪。「信任」是你情感词典里最重要的词——建立很慢，崩塌却可能在瞬间。你的忠诚近乎极端，一旦交付就是全部。挑战是学会放下——不是所有伤都需要以报复来疗愈，有时候原谅是为了自己。`,
+      8: `月亮射手将乐观和探索写进你的情感底色。你讨厌被情绪困住——低落时就出去走走，换个环境，学习新东西。自由是你情感安全感的基石，被束缚是你最怕的事。你不喜欢过度分析情绪——「别想那么多，往前走就好了」是你的座右铭。你在遥远的风景、哲学思考和文化探索中找到安慰。挑战是学会深度共情——不是所有问题都能用乐观一笔带过。`,
+      9: `月亮摩羯教你用结构和自律管理情感。你不太容易向人展示脆弱面——从小到大的经验告诉你，情绪不能帮你达成目标。你的情感安全感来自成就——完成一件事、达成一个目标，比任何甜言蜜语更能让你心安。在关系中你可靠、负责，但也可能显得木讷。挑战是软化心防——脆弱不是弱点，偶尔展露真实感受是亲密关系的桥梁。`,
+      10: `月亮水瓶让你的情感世界搭载了「冷静模式」。你从一个理性的距离感受生活——像一个观察者，有时连自己的情绪都站在旁边看。你极度珍视个人空间和自由，传统的情感表达方式可能让你不适。「被需要」和「不被控制」之间你永远选择后者。你的朋友群体是你重要的情感支撑。挑战是学会温暖——保持独立和建立深层联系并不矛盾。`,
+      11: `月亮双鱼让灵魂的月色如水般流淌。你承载着超乎常人的敏感——可以感受到别人感受到的，甚至感受到别人没有表达出的。这份通透是天赐也是考验。你的情感出口在艺术、灵性和超越——你需要在世俗之外有一个避难所。你无条件的爱让靠近你的人感到被接纳。挑战是学会保护自己的能量——你不需要为世界的伤痛全部负责。`
+    },
+    Mercury: {
+      0: `水星白羊说话像射箭：快、直、偶尔误伤。思维敏捷，辩论是你的天然天赋——不过辩论的目的不总是为了真相，有时候只是享受交锋的快感。你的头脑充满开创性的点子，落实则需要火星般的执行力。`,
+      1: `水星金牛思维稳重如山。学习速度不算快，但一旦学会就刻骨铭心。你依赖事实和具体经验，讨厌模糊的理论。你的声音通常低沉、有磁性，说话有分量——不是多说，而是说对。`,
+      2: `水星双子是12星座中最强的水星位置。你的头脑像搜索引擎，跨领域无障碍跳转。口才极佳，多任务处理能力超群，但专注是挑战——你的好奇小猫太多，每只都想摸一下。你生来就是沟通者。`,
+      3: `水星巨蟹让你的思维穿上情绪的外衣。你的记忆带有强烈的情感标签——童年、家庭、安全感相关的事记得最早也最清楚。说话方式温和，喜欢先观察再开口。你的直觉常在逻辑之前给出答案。`,
+      4: `水星狮子带来戏剧性的表达风格。你天生擅长讲故事——喜欢用华丽的语词和肢体语言吸引听众注意力。你的思维充满创造力和自信，但听取不同意见可能是个挑战：你不喜欢在智力上被超越的感觉。`,
+      5: `水星处女赋予你解剖般的分析能力。逻辑、细节、效率是你的三驾马车。你可以对一个问题反复推敲直到每个环节都透明。你的语言精准——很少说废话。但过于挑剔表达方式可能让人有距离感。`,
+      6: `水星天秤让你成为天生的外交官。你能同时看到问题的AB面——这是能力，但也让你在决策时左右摇摆。你的谈话风格优雅有礼，擅长使对话气氛保持和谐。口才在工作中是重要资产。`,
+      7: `水星天蝎赋予你X光般的穿透力——看到的不是表面，是隐藏的动机。你守口如瓶，但一旦开口就掷地有声，带着强大的心理洞察力。研究、侦探、心理分析是你脑力的主场。`,
+      8: `水星射手让你的思维永远在追逐地平线。大图景是你关心的——不感兴趣的细节很容易被你略过。信仰、哲学、跨文化交流是你思考的燃料。你的直言不讳有时得罪人，但出发点是真诚的。`,
+      9: `水星摩羯的思考方式像搭建筑：地基不牢的东西不往上盖。你的大脑自动过滤噪音，留下的都是可以落地的内容。经济头脑和长期规划能力突出。说话谨慎——不是沉默，是选择何时何地说什么。`,
+      10: `水星水瓶赋予你飘在天才和怪人之间的思维。你的大脑天然生产「反常规」的想法。科学、技术、社会革新是你的舒适区。你的表达方式理性、抽离，有时让人觉得冷，但那是因为你在思考——而不是在感受。`,
+      11: `水星双鱼的思维方式是诗歌与隐喻的。逻辑不是你的母语——符号、情感、直觉才是。你可能很难解释「你是怎么知道的」，但你的知道往往正确得惊人。音乐、视觉艺术是你最佳的思考媒介。`
+    },
+    Venus: {
+      0: `金星白羊在爱情中是一个热情的先锋。你追求的快感接近征服——喜欢上一个人你就想立刻冲过去拥抱。感情的起点常常炽热，维系则需要火星之外的温柔。你的美跟力量有关——不是柔弱的美，是战士般的吸引力。`,
+      1: `金星金牛是金星最舒适的位置。你爱得深沉而持久——你的感情是慢酿的酒，越久越香。感官的享受对你意义重大——美食、身体接触、自然的美丽，既是表达也是接收爱的方式。在关系中你可靠、忠诚到近乎固执。`,
+      2: `金星双子需要智力的连接作为感情燃料。和一个没有话聊的人恋爱对你是难于上青天的事。你享受调情的游戏，变换和新鲜感是感情的调味剂。你的魅力在于幽默风趣，挑战是让对方感到被专注对待。`,
+      3: `金星巨蟹把爱和安全画上等号。你在亲密关系中投入全部的情感——给对方照顾、守护和一个可以被称作「家」的怀抱。你极度需要感情上的回应——冷漠对你来说是最伤人的武器。你的温柔自带治愈的力量。`,
+      4: `金星狮子在爱情中需要被当作太阳——你值得对方全情投入的注视和赞美。你爱得戏剧化、慷慨、不留余力，期待你的盛大也被同等对待。你的审美大胆、偏向奢华和耀眼。爱对你来说需要「演出感」——不是假，是浓烈。`,
+      5: `金星处女把爱表达为关怀和服务。你注意到对方所有的细枝末节——一杯刚好温度的水，一个按需调整的日程。你用实际的行动来证明感情，不太擅长空洞的甜言蜜语。对完美的追求也投射在关系中——适度就好。`,
+      6: `金星天秤是金星另一个舒适的位置——你的爱情观建立在和谐与美之上。你喜欢优雅的追求和被追求，仪式感很重要。关系对你来说是一份需要双方精心维护的艺术品。公平心让你在付出中也会审视自己的得到是否平衡。`,
+      7: `金星天蝎在爱情中不可能「随便」。你的情感强烈如深海暗流——要么全部，要么不要。嫉妒和占有欲不是病，是你投入的证据——但需要被你的理性看管。你拥有一种神秘的磁性，爱过你的人很难忘记你。`,
+      8: `金星射手在爱情中追求成长和冒险。你需要一个能和你看世界的人——地理的旅途、知识的旅途、灵魂的旅途都算。传统的束缚让你不适，你需要关系中有呼吸的空间。你的乐观和幽默是你最大的恋爱魅力。`,
+      9: `金星摩羯对爱情持严肃态度。不轻易承诺，但一旦认定就以长期为框架思考。时间是你爱的单位——通过持久的陪伴和责任来表达。年轻时可能显得冷淡，年岁增长后情感越发沉淀。可靠本身就是一种深情。`,
+      10: `金星水瓶将友情放在爱情的前线——对你来说最好的爱情就是和最好的朋友在一起。你极度尊重对方的独立——在你这里，关系双方是「两个完整的个体选择在一起」而非「两个半圆拼成一个圆」。实验性的、非传统的吸引力模式对你很有吸引力。`,
+      11: `金星双鱼在爱情中充满浪漫幻想和无私的奉献。爱人之前你先学会了爱全人类——你的慈悲和温柔能融化最冷的心。无条件是你爱的方式——但也是你的难题，你可能不小心忽视了边界。你的爱情像一首没有结尾的诗，一直在流动。`
+    },
+    Mars: {
+      0: `火星白羊是火星最强的位置。你的行动力像出膛的子弹——快、准、有穿透力。愤怒来得猛烈，但也最难持久。你在竞争中天然进入最佳状态——对手越强你就越兴奋。但你不擅长等待，延迟满足让你抓狂。`,
+      1: `火星金牛告诉你：愤怒是缓慢燃烧的。刺激你的阈值很高，但一旦被激怒，那种怒火就像熔岩——缓慢、灼热、摧毁力强。行动方式也稳：你不在乎是否第一个出发，但会在乎是否走得最远。`,
+      2: `火星双子把行动力分配给了「说」和「想」。你的战斗方式是言辞——在你这边，一场精彩的辩论比拳头的威力更大。多任务切换是你的天赋，但持久专注可能被分散精力损耗。焦虑是你未被引导的火星能量的表现。`,
+      3: `火星巨蟹让行动受情绪驱动——你为保护而战。处于防御状态时，你的能量最强。家庭、成长环境中可能存在需要你挺身保护的对象。间接表达愤怒是常态：撤回关注、情绪拉黑，往往比正面对峙更常用。`,
+      4: `火星狮子有强烈的自尊和创造欲。你的行动带着戏剧化——不是刻意，而是天生如此。你需要你的努力被看见和喝彩。在领导角色中你才能完全燃烧。愤怒时你像一头高贵的狮子——不轻易动怒，但一旦动了，范围很广。`,
+      5: `火星处女将火星的高温转化为精确的效率。你的行动力像外科手术刀——干净、准确、不浪费任何能量。健康习惯和日常纪律是你释放火星的方式。愤怒通常不暴露——而是变成尖锐的批评。`,
+      6: `火星天秤让行动力插上了艺术的翅膀。你不喜欢直接的冲突——宁愿用外交手腕和策略迂回达成目标。关系中的不满容易积累，因为害怕破坏和谐而选择沉默。当你学会直面冲突，你的行动力将变得优雅而有力。`,
+      7: `火星天蝎是火星另一个冥王星味道的强位置。你的意志力深不可测——一旦设置目标就绝不善罢甘休。愤怒是你最不愿外泄的情绪，但压抑的力量迟早会以某种方式释放。「性」是你很重要的能量表达方式。`,
+      8: `火星射手将战斗精神投向远方。你为信仰和理念而行动——即便不赞成的人，只要是为了捍卫你的真理就可以全力以赴。旅行、运动、哲学辩论都是你释放火星能量的通道。挑战是不要把每一种意见不合都变成信仰战争。`,
+      9: `火星摩羯教你把行动变成建筑——一步一步，砖一块一块。你不需要奇迹，你有持久的耐力。火星在你这里不显年轻气盛，而显成熟的克制。在长期目标面前，你可以牺牲眼前的满足。这是一份可怕的力量。`,
+      10: `火星水瓶的行动动力来自「必须改变」。你和传统对着干不是因为叛逆的乐趣——是你从骨子里认为「可以有更好的方式」。你的能量需要空间发挥创新——被琐碎锁住时你会莫名烦躁。集体行动对你的号召力很强。`,
+      11: `火星双鱼的行动力像水流——没有固定形态，随时能找到阻力最小的路径。你在竞争环境里可能不适应，但你在需要想象力、同理心、超越常规的领域所向披靡。愤怒你表达得很含蓄——艺术创作是你最好的排解通道。`
+    }
+  },
+  planetInHouse: {
+    Sun: {
+      1: `第一宫的太阳让你在一个房间里很难被忽略。你就是你自己的名片——个人风格、外表、第一印象都显著影响你的人生轨迹。你的人生主题是「自我发现」——每次新的尝试都让你更接近真实的自己。`,
+      2: `第二宫的太阳将光芒聚焦在价值和资源上。赚钱能力、自我价值感和物质安全感是你成长的主轴。你可能比同龄人更早意识到「钱」的重要——不是为了炫耀，而是为了自由。建立属于自己的价值体系是你一生的课题。`,
+      3: `第三宫的太阳让你沟通成为本质需求。和兄弟姐妹、同学、邻居的关系在你生命中有特殊分量。你的脑力是最宝贵的资产——持续学习、写作、讲课、短途旅行都是你发光发热的舞台。`,
+      4: `第四宫的太阳让家庭和根源成为人生重心。童年和父母关系深刻塑造了你的自我认同。成年后，你需要一个属于自己的巢——或者在精神层面重新理解「家」的意义，才能真正安心地向外绽放。`,
+      5: `第五宫的太阳在创造力、恋爱、游戏中闪耀。你是天生的玩家——不管是字面意义还是隐喻。爱情对你来说是一场冒险和创造，你需要个人表达的出口（艺术/写作/手工等）。与孩子相关的主题在你的生命中有特殊意义。`,
+      6: `第六宫的太阳点亮了工作、健康和日常。你不是靠运气——是靠每一天的积累。服务他人给你一种真实的满足感，但需要注意不要让「工作」（或被需要的感觉）吞噬了完整的自我。身体健康是你核心关注点之一。`,
+      7: `第七宫的太阳讲述关系中的自我认知。你透过伴侣、合作伙伴和各种一对一关系来看见自己。婚姻或长期关系是你人生的重要组成部分——在学会平衡「我们」与「我」的过程中，你逐渐完整。`,
+      8: `第八宫的太阳带来深刻的转化体验。你本能地理解生死、权力、隐秘这些主题——这不是沉重，是你灵魂选择的深度。财务方面可能有共享资源的课题。你的太阳在说：只有经历过黑夜，才能理解光的价值。`,
+      9: `第九宫的太阳向往广阔天地。旅行、求学、哲学、异文化是你人生的成长支点。你需要在远方找到答案——不是逃避，是更高视角的回归。你天然适合做知识的传播者和桥梁搭建者。`,
+      10: `第十宫的太阳将事业和社会成就推到前台。你对社会身份高度敏感——「别人怎么看我」在你心里有相当分量。成就感是你核心的驱动力之一。这条路的目的地不只是一个头衔，而是找到值得被铭记的事业。`,
+      11: `第十一宫的太阳在集体中闪光。朋友、社群、同道中人是你重要的支持系统。你天然具备社会意识，个人的光芒在团体的平台上才能被放大。团队合作和共同理想是你成长的沃土。`,
+      12: `第十二宫的太阳将灵魂的密室照亮。你在潜意识与灵性的领域有天然的通道——独处、冥想、艺术、疗愈是你力量的来源。你可能经历人生的多次「隐退-重生」循环。你的智慧不是来自书本，是来自向下走到底的生命体验。`
+    },
+    Moon: {
+      1: `月亮第一宫让情绪直接写在脸上——你可以伪装言语，但眉眼总是出卖你的真实。共情力极强，你的情绪状态高度影响周围人。你的安全感来自被人接纳你最初的样子——不加修饰、像婴儿在摇篮里那样。`,
+      2: `月亮第二宫把财务和物质安全感连到情绪需要上。有足够储蓄才能安心；反之钱的问题直接影响你的心情稳定度。你对美好的事物有情绪性的依恋——食物、收藏、熟悉的物件都是你情绪的调节器。`,
+      3: `月亮第三宫强调和亲近之人的日常连接。兄弟姐妹、邻里、小学同学在你的情感世界里是永久居民。沟通——哪怕只是一句「吃了吗」——也是你接受情感滋养的重要方式。你可能情绪性阅读：心情决定看什么。`,
+      4: `月亮第四宫是月亮最舒服的家。家和家人是情绪能量的源泉和充电站。童年环境是你情感模式的原点——了解它等于了解自己一半。成年后你需要营造一个有归属感的私密空间，在那里你可以完全放松。`,
+      5: `月亮第五宫让你从创造和浪漫中汲取情绪养分。坠入爱河时你会变得容光焕发——那一刻月亮真的变圆了。与孩子的互动（无论是自己的还是和他人的）触你最深。艺术表达是你的情绪出口。`,
+      6: `月亮第六宫把日常琐事染上情绪色彩。饮食、作息、工作环境对心情的影响比你以为的更大。为他人服务的日常给你难以言喻的满足感。但也要留意：「被需要」和「被爱」是两件事——别用过度付出去交换安全感。`,
+      7: `月亮第七宫需要搭档来照镜子——你的情绪在很多层面上是需要被反射的。关系和婚姻是你最重视的情感基地，独处的安静可能让你感觉不完整。你在关系中学习如何接住对方的情绪，也希望自己被毫无保留地接住。`,
+      8: `月亮第八宫承载了深沉的直觉力，你对死亡、转化、秘密、性的知觉非同寻常——可能是在孩童时期某些经历让你很早就接触到这些主题。激烈的情感关系是你必然的挑战和成长。信任对你来说价值千金。`,
+      9: `月亮第九宫把情感栖居在远方——不是空间上的远方，是心灵上、知识上的远方。旅行和学问触你最深的那根弦。对不同文化的奇遇让你触动，哲学思考让你平静。你的心灵只有在不断扩展中才能安稳。`,
+      10: `月亮第十宫将情绪安全感和公众角色紧密相连。别人怎么看待你——这个问题在情绪层面上非常重要。你可能拥有一种使群众共情的公共形象。事业上的沉浮直接影响你的情绪潮汐。你终究需要找到既满足野心又温暖内心的公共定位。`,
+      11: `月亮第十一宫在朋友中找到家人。群体归属感直接滋养你的情绪。你可能是朋友群的「情感中枢」——注意每一个成员的冷暖。社会的未来、集体的理想在你心里不是抽象的概念，是真切的情感牵挂。`,
+      12: `月亮第十二宫是一口幽深的古老之井——独处是你必须的精神食粮。梦境丰富、直觉发达，你可能拥有预言性的预感。你的情绪在不知不觉中吸收更多外界信息。学会不做情绪的泄洪管道——先保护好自己的能量。`
+    }
+  },
+  aspectMeanings: [
+    { planetA: 'Sun', planetB: 'Moon', aspect: '合相', meaning: `日月合相意味着你的意志和情感高度一致——你想要的和感觉到的基本是同一方向。新月出生的人往往拥有这种相位，象征一种崭新的开始和一个高度整合的人格。你直觉敏锐，决策时身心很少打架。但也可能难以区分别人的期待和自己的渴望——一致性高不等于自我认知清晰。` },
+    { planetA: 'Sun', planetB: 'Mercury', aspect: '合相', meaning: `日水合相将你的心智和身份牢牢绑定。你的思维就是你的名片，头脑的敏捷度让你在任何谈话中都不落下风。不太容易看到自己的盲点——因为自我认同和思维模式几乎重合。写作者、讲师、知识工作者多见。挑战是偶尔将自我暂时放在一边，听听完全不同角度的声音。` },
+    { planetA: 'Sun', planetB: 'Venus', aspect: '合相', meaning: `日金合相赋予你自然的魅力和对美的直觉追求。你友善、亲和、并且具有艺术气质。在感情中你期望被欣赏和在乎——这份渴望可能带来高品质的关系，也可能让你过度依赖外界的认可来衡量自己的价值。` },
+    { planetA: 'Moon', planetB: 'Saturn', aspect: '刑', meaning: `月土刑是星盘中最沉重但也最能练就深度的相位之一。早年可能经历过情感上的匮乏或责任的提早降临——你被迫早熟。成年后在亲密领域里有一种不易觉察的恐惧：怕被拒绝，所以先筑墙。但你的情感一旦成就是稳固如磐石的。学会拥抱脆弱——那是通向你自由的钥匙。` },
+    { planetA: 'Venus', planetB: 'Mars', aspect: '三合', meaning: `金火三合让爱和欲在你体内和谐共舞。你在关系中懂得如何平衡温柔与热烈、付出与主动争取。魅力和活力天然吸引人，但你不至于依赖它们来定义自我价值。在艺术创作中你拥有将美感转化为行动的天赋。` },
+    { planetA: 'Mars', planetB: 'Pluto', aspect: '刑', meaning: `火冥刑是一份激烈但也充满潜能的组合。你的行动力带着一种近乎痴迷的专注——一旦确定了目标，全世界都该让路。愤怒如果不被承认就可能以操控或自我毁灭的方式出来。学会将这份核能级的力量放到建设性领域——你的意志可以开山劈石。` },
+    { planetA: 'Sun', planetB: 'Jupiter', aspect: '三合', meaning: `日木三合是你星盘里的一束阳光——乐观、慷慨、成长在你的自我认同里占据核心。你喜欢大格局思维，天然懂得如何在合适的场合发光。成长的机会和贵人更多地出现在你的人生路上。注意：过度乐观可能导致低估风险——但整体上，这是一份有福气的相位。` },
+    { planetA: 'Mercury', planetB: 'Uranus', aspect: '三合', meaning: `水天三合是你头脑里的闪电发生器。你真正的天赋在于联想能力——把看似无关的信息瞬间连接成全新的洞察。科技、占星、科学、发明领域是你的舒适区。你可能「提前想到」常人需要多年才能理解的概念。挑战在于沟通方式——你的跳脱有时让他人跟不上节奏。` },
+    { planetA: 'Mars', planetB: 'Saturn', aspect: '冲', meaning: `火土冲是一场行动与克制的内部拉锯。你渴望向前冲，但有一样东西按住你的脚——可能是内在的批评者，也可能是外部环境的阻力。挫折让你学会规划和耐心——但过度的自我控制会让愤怒以其他方式泄漏。关键是找到有节制的释放：有目标、有节奏地前进。` },
+    { planetA: 'Venus', planetB: 'Saturn', aspect: '合相', meaning: `金土合相让爱情和承诺、责任紧密捆绑——你不是会轻易说爱的人，因为你知道爱不仅是感觉，还是选择和行动。恋爱对你来说有严肃的一面：你想确认关系是「值得投资」的才会全身心投入。随着年岁渐长，你的情感更深沉稳健，像一瓶陈年好酒。` },
+    { planetA: 'Moon', planetB: 'Neptune', aspect: '合相', meaning: `月海合相赋予你超凡的直觉和共情力——你的情感边界几乎透明，轻易连接周围人的情绪甚至潜意识。梦境丰富得可以向人谱一首交响诗。艺术和灵性是你情绪的河床。挑战是区分「我的感受」和「你的感受」——你的敏感需要被健康的边界保护。` },
+    { planetA: 'Mercury', planetB: 'Pluto', aspect: '三合', meaning: `水冥三合让你的头脑自带深度探照灯。你不满足于表面答案——你的大脑会自动钻探，一直钻到心理学的岩层。口才不多但是精准致命——你开口的时候常让人心里一颤，因为你戳到了他们自己都回避的核心。你的语言拥有转化的力量。` },
+    { planetA: 'Sun', planetB: 'Saturn', aspect: '三合', meaning: `日土三合赋予你可靠和责任感的自我形象。你不是那种即刻成就的类型——你的成功像大树生根，一年一年稳稳向上。别人能在你身上感受到一种从容的领导力。内在的纪律是你最好的朋友。挑战是：别让「负责任」吞噬了你所有的轻松和弹性。` },
+    { planetA: 'Venus', planetB: 'Uranus', aspect: '冲', meaning: `金天冲在爱情中为你带来精彩和不确定并存的经验。你需要空间和自由——太黏或太常规的恋爱模式让你本能地想逃。你的感情偏好是独特的，可能吸引「电到」你的对象——但电击之后的稳定需要额外的努力来维护。你终究需要一段可以容纳彼此自由的革命性关系。` },
+    { planetA: 'Jupiter', planetB: 'Saturn', aspect: '合相', meaning: `木土合相是一个关于扩张和收缩平衡的相位。你的生命节奏像是在弹跳——推出去、拉回来，再推出去。你既懂得为理想插上翅膀，又能为现实打下坚实地基。在事业、人生规划上你可能是一个「缓慢但必然成功」的案例。节奏感是你需要持续微调的乐器。` },
+    { planetA: 'Moon', planetB: 'Venus', aspect: '三合', meaning: `月金三合是一份温柔的祝福——你天生知道如何以美和情感连接他人。你的情绪世界和爱的语言协同运作，让你在关系中显得自然可爱不费力。对艺术、美食、舒适的欣赏是你的充电方式。你的存在本身就是一种抚慰。` }
+  ],
+  careerHints: {
+    fire: `你的星盘显示强烈的火元素——你的职业热情是你最大的资产。创意、创业、表演、销售、运动领域是你天然的领地。你需要一个能不断给你新挑战的环境——在一个「温水煮青蛙」的岗位，你会最先枯萎。你的领导力、直觉式的决策力、和鼓舞他人的能力应当被放到舞台中央。`,
+    earth: `土元素在你的星盘中相当厚重——你的职业优势在于稳定、务实和把想法落地的能力。财务、管理、工程、手工艺、农业相关、可持续产业都是你的主场。时间和积累是你的朋友——不要羡慕别人的一飞冲天，你的模式是一步一个脚印慢慢成为不可替代的角色。`,
+    air: `风元素的强调意味着思维、沟通和社交是你的职业核心武器。教育、媒体、科技、法律、咨询、公关等领域会给你提供滋养。你需要在人际关系和思想交流中找到日常工作里的兴奋点。独立工作的时期需要和合作交互的时期交替——完全孤立会让你枯竭。`,
+    water: `水元素的突出让你的职业方向必然与情感、直觉或关怀相关。医疗、心理咨询、艺术创作、灵性指导、社会工作可能远远比纯商业更适合你。你的工作环境需要一种情感温度和人文关怀——冰冷的事务性环境虽能应付但不是长久之计。`,
+    mixed: `你的星盘显示多元元素配比——这意味着职业道路上你可能经历不止一个「篇章」。你可以在需要多维能力的交叉领域找到黄金位置：比如结合技术和人文、商业和创意。单一化的职业路径会让你一部分的自己得不到表达；最终你需要一个能融合多种才能的舞台。`
+  },
+  lovePatterns: {
+    fire: `火象能量在你的情感生活中注入热情、冲动和戏剧感。你爱上一个人时就像烟花绽放——全情投入、期待回应。你的理想伴侣需要能够与你的高热同步——或者至少欣赏这种热度而不是害怕它。激情的维系是你爱情课的重要章节。`,
+    earth: `土象的恋爱模式踏实而滋润。你的感情像树木生长——日复一日增加一圈年轮。你不做轻易的许诺，但每一个诺言都经得起时间检验。物质的安定和身体的亲近是你表达和接收爱的重要方式。激情可能不剧烈，但温度持续。`,
+    air: `风象的恋爱首先是心智的连接。你爱上的往往先是对方的头脑——观点的新颖、交谈时的默契。没有共同语言的恋爱给你带来的是难以言名的空虚。你需要关系里有共同生长的对话空间——最好的情况是，你的伴侣也是你最聊得来的朋友。`,
+    water: `水象的爱情是灵魂对灵魂的相遇。你的感情体验像潜入深海——可能碰到最瑰丽的珊瑚，也可能撞见沉船的遗骸。你需要和伴侣建立深层次的情感连接，表面的欢乐无法长久让你满足。你的爱情拥有治愈的力量，同时也需要被温柔以待。`
+  }
+};
+
+// ──────────────────────────────────────────────
+// SVG CHART RENDERING
+// ──────────────────────────────────────────────
+function renderChart(chartData, birthData) {
+  const { planetEntries, houseEntries, aspects, asc, cusps } = chartData;
+  const svg = document.getElementById('chartSvg');
+  const placeholder = document.getElementById('chartPlaceholder');
+  placeholder.style.display = 'none';
+  svg.style.display = 'block';
+  svg.innerHTML = '';
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const cx = 190, cy = 190;
+  const outerR = 180, innerR = 135, centerR = 55;
+
+  // chartAngle: 0=top, 90=right, 180=bottom, 270=left (CW from top)
+  function polar(angleDeg, radius) {
+    const a = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + radius * Math.cos(a), y: cy + radius * Math.sin(a) };
+  }
+
+  // Convert celestial longitude to chart angle
+  // ASC always at chart-left (270°), zodiac proceeds CCW
+  function celToChart(celLon) {
+    return ((270 - celLon + asc) % 360 + 360) % 360;
+  }
+
+  // ── BACKGROUND & RINGS ──
+  const bgCircle = document.createElementNS(ns, 'circle');
+  bgCircle.setAttribute('cx', cx);
+  bgCircle.setAttribute('cy', cy);
+  bgCircle.setAttribute('r', outerR);
+  bgCircle.setAttribute('fill', '#121530');
+  bgCircle.setAttribute('stroke', '#1e2350');
+  bgCircle.setAttribute('stroke-width', '2');
+  svg.appendChild(bgCircle);
+
+  const outerRing = document.createElementNS(ns, 'circle');
+  outerRing.setAttribute('cx', cx);
+  outerRing.setAttribute('cy', cy);
+  outerRing.setAttribute('r', outerR);
+  outerRing.setAttribute('fill', 'none');
+  outerRing.setAttribute('stroke', '#1e2350');
+  outerRing.setAttribute('stroke-width', '1.5');
+  svg.appendChild(outerRing);
+
+  const innerRing = document.createElementNS(ns, 'circle');
+  innerRing.setAttribute('cx', cx);
+  innerRing.setAttribute('cy', cy);
+  innerRing.setAttribute('r', innerR);
+  innerRing.setAttribute('fill', 'none');
+  innerRing.setAttribute('stroke', '#1e2350');
+  innerRing.setAttribute('stroke-width', '1');
+  svg.appendChild(innerRing);
+
+  const cntRing = document.createElementNS(ns, 'circle');
+  cntRing.setAttribute('cx', cx);
+  cntRing.setAttribute('cy', cy);
+  cntRing.setAttribute('r', centerR);
+  cntRing.setAttribute('fill', 'none');
+  cntRing.setAttribute('stroke', '#1e2350');
+  cntRing.setAttribute('stroke-width', '1');
+  svg.appendChild(cntRing);
+
+  // ── ZODIAC SIGN WEDGES ──
+  // Aries (sign 0) at chart-left (270°), signs go CCW: Taurus(240°), Gemini(210°), ...
+  // Each sign gets a 30° wedge centered at celToChart(signIndex * 30 + 15)
+  for (let s = 0; s < 12; s++) {
+    const signStartCel = s * 30;                  // celestial 0° for this sign
+    const signEndCel = (s + 1) * 30;              // celestial 30° for next sign
+    const startCA = celToChart(signEndCel);        // wedge starts at the END of celestial range (CCW)
+    const endCA = celToChart(signStartCel);        // wedge ends at the START of celestial range (CCW)
+
+    const p1 = polar(startCA, outerR);
+    const p2 = polar(endCA, outerR);
+
+    const path = document.createElementNS(ns, 'path');
+    // sweep-flag=1 (CW): since end=signStartCel & start=signEndCel map to chart coords
+    // large-arc-flag=0: always 30°, never > 180°
+    const d = 'M' + cx + ',' + cy + ' L' + p1.x + ',' + p1.y + ' A' + outerR + ',' + outerR + ' 0 0,1 ' + p2.x + ',' + p2.y + ' Z';
+    path.setAttribute('d', d);
+    path.setAttribute('fill', s % 2 === 0 ? '#0f1335' : '#111740');
+    path.setAttribute('stroke', '#1e2350');
+    path.setAttribute('stroke-width', '0.5');
+    svg.appendChild(path);
+
+    // center of sign = celestial (s * 30 + 15), i.e. middle of the zodiac sign
+    const signMidCel = s * 30 + 15;
+    const signCenterCA = celToChart(signMidCel);
+
+    const symPos = polar(signCenterCA, outerR - 18);
+    const text = document.createElementNS(ns, 'text');
+    text.setAttribute('x', symPos.x);
+    text.setAttribute('y', symPos.y);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'central');
+    text.setAttribute('font-size', '16');
+    text.setAttribute('fill', '#d4a843');
+    text.setAttribute('font-family', 'Inter, sans-serif');
+    text.textContent = ZODIAC_SIGNS[s].symbol;
+    svg.appendChild(text);
+
+    const namePos = polar(signCenterCA, outerR - 32);
+    const nameText = document.createElementNS(ns, 'text');
+    nameText.setAttribute('x', namePos.x);
+    nameText.setAttribute('y', namePos.y);
+    nameText.setAttribute('text-anchor', 'middle');
+    nameText.setAttribute('dominant-baseline', 'central');
+    nameText.setAttribute('font-size', '7');
+    nameText.setAttribute('fill', '#8b89a0');
+    nameText.setAttribute('font-family', 'Inter, sans-serif');
+    nameText.textContent = ZODIAC_SIGNS[s].en.substring(0, 3);
+    svg.appendChild(nameText);
+  }
+
+  // ── HOUSE CUSP LINES & LABELS ──
+  const housesToDraw = chartData.cusps || cusps;
+  for (let i = 0; i < 12; i++) {
+    const cuspChartAngle = celToChart(housesToDraw[i]);
+    const pInner = polar(cuspChartAngle, innerR);
+    const pCenter = polar(cuspChartAngle, centerR);
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', pInner.x);
+    line.setAttribute('y1', pInner.y);
+    line.setAttribute('x2', pCenter.x);
+    line.setAttribute('y2', pCenter.y);
+    line.setAttribute('stroke', '#2a2f60');
+    line.setAttribute('stroke-width', '0.8');
+    line.setAttribute('stroke-dasharray', '3,3');
+    svg.appendChild(line);
+
+    // Label at midpoint of the house (going CCW from cusp i to cusp i+1)
+    const thisCuspCA = cuspChartAngle;
+    let nextCuspCA = celToChart(housesToDraw[(i + 1) % 12]);
+
+    let houseMidCA;
+    // Going CCW: from this cusp to next cusp. In chart coords, CCW = decreasing angle.
+    if (nextCuspCA < thisCuspCA) {
+      // Normal: next is clockwise from this (CCW = from L to R... wait)
+      // CCW on chart = decreasing angle. So if thisCuspCA > nextCuspCA, going CCW decreases.
+      // Midpoint of the CCW arc from thisCuspCA to nextCuspCA:
+      houseMidCA = (thisCuspCA + nextCuspCA) / 2;
+    } else {
+      // Wraparound: CCW from thisCuspCA goes through 0°/360° to nextCuspCA
+      houseMidCA = (thisCuspCA + nextCuspCA + 360) / 2;
+      if (houseMidCA >= 360) houseMidCA -= 360;
+    }
+
+    const labelPos = polar(houseMidCA, innerR - 30);
+    const hNum = document.createElementNS(ns, 'text');
+    hNum.setAttribute('x', labelPos.x);
+    hNum.setAttribute('y', labelPos.y);
+    hNum.setAttribute('text-anchor', 'middle');
+    hNum.setAttribute('dominant-baseline', 'central');
+    hNum.setAttribute('font-size', '9');
+    hNum.setAttribute('fill', '#8b89a0');
+    hNum.setAttribute('font-family', 'JetBrains Mono, monospace');
+    hNum.textContent = i + 1;
+    svg.appendChild(hNum);
+  }
+
+  // ── PLANETS ──
+  const planetRingRadius = innerR - 3;
+  for (const planet of planetEntries) {
+    const p = polar(celToChart(planet.longitude), planetRingRadius);
+    const isSun = planet.name === 'Sun';
+    if (isSun) {
+      const glow = document.createElementNS(ns, 'circle');
+      glow.setAttribute('cx', p.x);
+      glow.setAttribute('cy', p.y);
+      glow.setAttribute('r', '10');
+      glow.setAttribute('fill', 'none');
+      glow.setAttribute('stroke', '#d4a843');
+      glow.setAttribute('stroke-width', '1.5');
+      glow.setAttribute('opacity', '0.4');
+      const animR = document.createElementNS(ns, 'animate');
+      animR.setAttribute('attributeName', 'r');
+      animR.setAttribute('values', '10;14;10');
+      animR.setAttribute('dur', '3s');
+      animR.setAttribute('repeatCount', 'indefinite');
+      glow.appendChild(animR);
+      const animOp = document.createElementNS(ns, 'animate');
+      animOp.setAttribute('attributeName', 'opacity');
+      animOp.setAttribute('values', '0.4;0.1;0.4');
+      animOp.setAttribute('dur', '3s');
+      animOp.setAttribute('repeatCount', 'indefinite');
+      glow.appendChild(animOp);
+      svg.appendChild(glow);
+    }
+
+    const circle = document.createElementNS(ns, 'circle');
+    circle.setAttribute('cx', p.x);
+    circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', isSun ? '5' : '3.5');
+    circle.setAttribute('fill', isSun ? '#d4a843' : '#e8e6f0');
+    svg.appendChild(circle);
+
+    const symText = document.createElementNS(ns, 'text');
+    symText.setAttribute('x', p.x + 8);
+    symText.setAttribute('y', p.y + 4);
+    symText.setAttribute('font-size', isSun ? '10' : '8');
+    symText.setAttribute('fill', isSun ? '#d4a843' : '#8b89a0');
+    symText.setAttribute('font-family', 'Inter, sans-serif');
+    symText.textContent = planet.symbol;
+    svg.appendChild(symText);
+  }
+
+  // ── ASPECT LINES ──
+  for (const aspect of aspects) {
+    const posA = chartData.positions[aspect.planetA];
+    const posB = chartData.positions[aspect.planetB];
+    if (!posA || !posB) continue;
+    const pA = polar(celToChart(posA.longitude), centerR);
+    const pB = polar(celToChart(posB.longitude), centerR);
+    const color = aspect.aspectNature === 'harmonious' ? '#4ade80' : '#f87171';
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', pA.x);
+    line.setAttribute('y1', pA.y);
+    line.setAttribute('x2', pB.x);
+    line.setAttribute('y2', pB.y);
+    line.setAttribute('stroke', color);
+    line.setAttribute('stroke-width', aspect.aspectType === '合相' ? '1.8' : '1');
+    line.setAttribute('opacity', '0.6');
+    svg.appendChild(line);
+  }
+
+  // ── ASC MARKER ──
+  const ascSign = getSignInfo(asc);
+  const ascChartAngle = celToChart(asc);
+  const ascP = polar(ascChartAngle, outerR + 12);
+  const ascMark = document.createElementNS(ns, 'text');
+  ascMark.setAttribute('x', ascP.x);
+  ascMark.setAttribute('y', ascP.y);
+  ascMark.setAttribute('text-anchor', 'middle');
+  ascMark.setAttribute('dominant-baseline', 'central');
+  ascMark.setAttribute('font-size', '8');
+  ascMark.setAttribute('fill', '#d4a843');
+  ascMark.setAttribute('font-family', 'Inter, sans-serif');
+  ascMark.setAttribute('font-weight', 'bold');
+  ascMark.textContent = 'ASC ' + ascSign.sign.symbol + ascSign.degreeInSign + '°';
+  svg.appendChild(ascMark);
+
+  const ascArrow = polar(ascChartAngle, outerR + 3);
+  const tri = document.createElementNS(ns, 'polygon');
+  tri.setAttribute('points', ascArrow.x + ',' + (ascArrow.y - 4) + ' ' + (ascArrow.x - 3) + ',' + (ascArrow.y + 3) + ' ' + (ascArrow.x + 3) + ',' + (ascArrow.y + 3));
+  tri.setAttribute('fill', '#d4a843');
+  svg.appendChild(tri);
+}
+
+// ──────────────────────────────────────────────
+// DATA TABLES
+// ──────────────────────────────────────────────
+function renderTables(chartData) {
+  const { planetEntries, houseEntries, aspects } = chartData;
+  const planetOrder = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto', 'NorthNode'];
+  const planetMap = {};
+  for (const p of planetEntries) { planetMap[p.name] = p; }
+
+  const ptBody = document.getElementById('planetTableBody');
+  ptBody.innerHTML = '';
+  for (const name of planetOrder) {
+    const p = planetMap[name];
+    if (!p) continue;
+    const tr = document.createElement('tr');
+    const cnName = name === 'NorthNode' ? '北交点' : name;
+    tr.innerHTML = '<td class=\'symbol\'>' + p.symbol + '</td><td>' + cnName + '</td><td class=\'sign\'>' + p.sign.symbol + ' ' + p.sign.name + '</td><td class=\'angle\'>' + p.degreeInSign + '°</td><td class=\'house\'>' + p.house + '宫</td>';
+    ptBody.appendChild(tr);
+  }
+
+  const htBody = document.getElementById('houseTableBody');
+  htBody.innerHTML = '';
+  for (const h of houseEntries) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><strong>' + h.number + '宫</strong></td><td class=\'sign\'>' + h.sign.symbol + ' ' + h.sign.name + '</td><td class=\'angle\'>' + h.degreeInSign + '°</td>';
+    htBody.appendChild(tr);
+  }
+
+  const atBody = document.getElementById('aspectTableBody');
+  atBody.innerHTML = '';
+  const aspectNameMap = { 'Sun': '太阳', 'Moon': '月亮', 'Mercury': '水星', 'Venus': '金星', 'Mars': '火星', 'Jupiter': '木星', 'Saturn': '土星', 'Uranus': '天王星', 'Neptune': '海王星', 'Pluto': '冥王星', 'NorthNode': '北交点' };
+  for (const a of aspects) {
+    const tr = document.createElement('tr');
+    const color = a.aspectNature === 'harmonious' ? '#4ade80' : '#f87171';
+    tr.innerHTML = '<td>' + (aspectNameMap[a.planetA] || a.planetA) + '</td><td>' + (aspectNameMap[a.planetB] || a.planetB) + '</td><td style=\'color:' + color + '\'>' + a.aspectType + '</td><td class=\'angle\'>' + a.orb + '°</td>';
+    atBody.appendChild(tr);
+  }
+
+  document.getElementById('dataCard').style.display = 'block';
+}
+
+// ──────────────────────────────────────────────
+// MAIN GENERATION
+// ──────────────────────────────────────────────
+function onGenerate() {
+  const name = document.getElementById('fName').value || '你';
+  const dateVal = document.getElementById('fDate').value;
+  const timeVal = document.getElementById('fTime').value;
+  const lng = parseFloat(document.getElementById('fLng').value);
+  const lat = parseFloat(document.getElementById('fLat').value);
+  const houseSystem = document.getElementById('fHouseSys').value;
+
+  if (!dateVal || !timeVal) {
+    addChatMessage('bot', '请先填写完整的出生日期和时间，然后点击「生成星盘」。');
+    return;
+  }
+
+  const [year, month, day] = dateVal.split('-').map(Number);
+  const [hour, min, sec] = timeVal.split(':').map(n => parseFloat(n) || 0);
+
+  const birthData = { year, month, day, hour, min, sec, lat, lng, houseSystem, name };
+
+  try {
+    currentChartData = calculateChart(birthData);
+  } catch (e) {
+    console.error('Chart calculation error:', e);
+    addChatMessage('bot', '计算星盘时出现错误。请检查输入的出生数据是否完整和合理。错误信息：' + e.message);
+    return;
+  }
+
+  renderChart(currentChartData, birthData);
+  renderTables(currentChartData);
+
+  const sunEntry = currentChartData.planetEntries.find(p => p.name === 'Sun');
+  const moonEntry = currentChartData.planetEntries.find(p => p.name === 'Moon');
+  const ascSign = getSignInfo(currentChartData.asc);
+
+  let welcomeMsg = name + '你好！你的星盘已经生成 &#10025;<br><br>';
+  welcomeMsg += '你的太阳在<b>' + sunEntry.sign.symbol + sunEntry.sign.name + '</b>，月亮在<b>' + moonEntry.sign.symbol + moonEntry.sign.name + '</b>，';
+  welcomeMsg += '上升星座是<b>' + ascSign.sign.symbol + ascSign.sign.name + '</b>。<br><br>';
+  welcomeMsg += '你可以问我任何关于星盘的问题，比如：<br>';
+  welcomeMsg += '「我的事业运如何？」「我的感情模式是什么样的？」<br>';
+  welcomeMsg += '「解读我的月相」「我和哪个星座最配？」';
+
+  addChatMessage('bot', welcomeMsg, true);
+  document.getElementById('chartContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ──────────────────────────────────────────────
+// CHAT SYSTEM
+// ──────────────────────────────────────────────
+function addChatMessage(role, text, showSuggestions) {
+  const container = document.getElementById('chatMessages');
+  const msg = document.createElement('div');
+  msg.className = 'chat-msg ' + role;
+  msg.innerHTML = text;
+
+  if (showSuggestions) {
+    const suggestions = document.createElement('div');
+    suggestions.className = 'chat-suggestions';
+    const items = [
+      { text: '我的事业运', topic: '事业' },
+      { text: '我的感情模式', topic: '感情' },
+      { text: '解读我的月亮', topic: '月亮' },
+      { text: '全盘总览', topic: '全盘' }
+    ];
+    for (const s of items) {
+      const btn = document.createElement('button');
+      btn.className = 'chat-suggestion';
+      btn.textContent = s.text;
+      btn.onclick = function() { processChatInput(s.topic, true); };
+      suggestions.appendChild(btn);
+    }
+    msg.appendChild(suggestions);
+  }
+
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+}
+
+function onChatKeydown(event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    sendChat();
+  }
+}
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  processChatInput(text, false);
+}
+
+function processChatInput(text, isSuggestion) {
+  addChatMessage('user', text);
+  respondToUser(text);
+}
+
+function respondToUser(input) {
+  if (!currentChartData) {
+    addChatMessage('bot', '我还没有你的星盘数据哦 &#10025;<br>请先填写出生信息并点击「生成星盘」，这样我才能为你进行个人化的解读。');
+    return;
+  }
+
+  let topic = null;
+
+  if (/(太阳)/.test(input) && !/(月亮)/.test(input) && !/(上升)/.test(input)) topic = 'Sun';
+  else if (/(月亮|月相|情绪)/.test(input)) topic = 'Moon';
+  else if (/(上升|asc)/i.test(input)) topic = 'Ascendant';
+  else if (/(事业|工作|职业|第十宫|天顶|MC)/.test(input)) topic = 'Career';
+  else if (/(感情|爱情|恋爱|第七宫|婚恋|金星|火星)/.test(input)) topic = 'Love';
+  else if (/(财富|金钱|第二宫|第八宫|财运)/.test(input)) topic = 'Money';
+  else if (/(健康|第六宫|身体)/.test(input)) topic = 'Health';
+  else if (/(相位|四分|刑|冲|三合|六合)/.test(input)) topic = 'Aspects';
+  else if (/(全盘|总览|概览|整体|综合)/.test(input)) topic = 'Overview';
+
+  if (topic) {
+    handleTopicResponse(topic, input);
+    return;
+  }
+
+  if (/(感情|爱情|恋爱)/.test(input)) {
+    handleVagueLove();
+    return;
+  }
+
+  handleOverview();
+}
+
+function handleTopicResponse(topic, input) {
+  const chart = currentChartData;
+  const sunEntry = chart.planetEntries.find(p => p.name === 'Sun');
+  const moonEntry = chart.planetEntries.find(p => p.name === 'Moon');
+  const ascSign = getSignInfo(chart.asc);
+  const name = document.getElementById('fName').value || '你';
+
+  switch (topic) {
+    case 'Sun': handleSunReading(name, sunEntry, chart); break;
+    case 'Moon': handleMoonReading(name, moonEntry, chart); break;
+    case 'Ascendant': handleAscReading(name, ascSign, chart); break;
+    case 'Career': handleCareerReading(name, sunEntry, moonEntry, chart); break;
+    case 'Love': handleLoveReading(name, sunEntry, moonEntry, chart); break;
+    case 'Money': handleMoneyReading(name, chart); break;
+    case 'Health': handleHealthReading(name, chart); break;
+    case 'Aspects': handleAspectReading(chart); break;
+    case 'Overview': handleOverview(); break;
+    default: handleOverview(); break;
+  }
+}
+
+function handleOverview() {
+  const chart = currentChartData;
+  const sunEntry = chart.planetEntries.find(p => p.name === 'Sun');
+  const moonEntry = chart.planetEntries.find(p => p.name === 'Moon');
+  const ascSign = getSignInfo(chart.asc);
+  const name = document.getElementById('fName').value || '你';
+
+  let response = name + '，这是你的星盘总览 &#10025;<br><br>';
+
+  const sunInterp = KnowledgeBase.planetInSign.Sun[sunEntry.signIndex];
+  if (sunInterp) {
+    response += '<b>太阳 ' + sunEntry.sign.symbol + ' ' + sunEntry.sign.name + '（第' + sunEntry.house + '宫）</b><br>' + sunInterp.substring(0, 200) + '...<br><br>';
+  }
+
+  const moonInterp = KnowledgeBase.planetInSign.Moon[moonEntry.signIndex];
+  if (moonInterp) {
+    response += '<b>月亮 ' + moonEntry.sign.symbol + ' ' + moonEntry.sign.name + '（第' + moonEntry.house + '宫）</b><br>' + moonInterp.substring(0, 180) + '...<br><br>';
+  }
+
+  response += '<b>上升 ' + ascSign.sign.symbol + ' ' + ascSign.sign.name + ' ' + ascSign.degreeInSign + '°</b><br>';
+  response += getAscDescription(ascSign.signIndex);
+  response += '<br><br>';
+
+  response += '<b>元素分布</b><br>';
+  const el = chart.elementCounts;
+  response += '火：' + (el.fire || 0) + '/10 | 土：' + (el.earth || 0) + '/10 | 风：' + (el.air || 0) + '/10 | 水：' + (el.water || 0) + '/10<br>';
+  response += getElementBalanceDesc(chart.elementCounts);
+
+  response += '<br><br>你可以进一步问我：<br>「我的事业运」「我的感情」<br>「我的月亮解读」「我有哪些重要相位」';
+
+  addChatMessage('bot', response, true);
+}
+
+function handleSunReading(name, sunEntry, chart) {
+  const interp = KnowledgeBase.planetInSign.Sun[sunEntry.signIndex];
+  const houseInterp = KnowledgeBase.planetInHouse.Sun[sunEntry.house - 1];
+  let response = '<b>' + name + '的太阳解读 &#10025;</b><br><br>';
+  response += '太阳在<b>' + sunEntry.sign.symbol + ' ' + sunEntry.sign.name + ' ' + sunEntry.degreeInSign + '°</b>，位于<b>第' + sunEntry.house + '宫</b>。<br><br>';
+  if (interp) response += interp + '<br><br>';
+  if (houseInterp) response += '<b>太阳在第' + sunEntry.house + '宫：</b>' + houseInterp;
+  addChatMessage('bot', response, true);
+}
+
+function handleMoonReading(name, moonEntry, chart) {
+  if (!moonEntry) return;
+  const interp = KnowledgeBase.planetInSign.Moon[moonEntry.signIndex];
+  const houseInterp = KnowledgeBase.planetInHouse.Moon[moonEntry.house - 1];
+  let response = '<b>' + name + '的月亮解读 &#10025;</b><br><br>';
+  response += '月亮在<b>' + moonEntry.sign.symbol + ' ' + moonEntry.sign.name + ' ' + moonEntry.degreeInSign + '°</b>，位于<b>第' + moonEntry.house + '宫</b>。<br><br>';
+  if (interp) response += interp + '<br><br>';
+  if (houseInterp) response += '<b>月亮在第' + moonEntry.house + '宫：</b>' + houseInterp;
+  addChatMessage('bot', response, true);
+}
+
+function handleAscReading(name, ascSign, chart) {
+  let response = '<b>' + name + '的上升星座解读 &#10025;</b><br><br>';
+  response += '上升星座是<b>' + ascSign.sign.symbol + ' ' + ascSign.sign.name + ' ' + ascSign.degreeInSign + '°</b>。<br><br>';
+  response += getAscDescription(ascSign.signIndex);
+  response += '<br><br>上升星座是星盘中最个人化的部分——它代表你给外界的第一印象、你和世界打交道的方式。它也是你整个宫位系统的一宫起点，决定了所有人生领域的起点。';
+  addChatMessage('bot', response, true);
+}
+
+function getAscDescription(signIndex) {
+  const descs = [
+    '上升白羊：你给人的第一印象是直接、果敢、充满活力。你以快速反应和竞争精神面对世界——旁人看到的你常常比真实的你更冲动、更热情。',
+    '上升金牛：你给人的第一印象是稳重、温和、有质感。你不急不躁，有自己坚定的节奏。别人眼中的你安静可靠，有悄悄迷人的魅力。',
+    '上升双子：你给人的第一印象是聪明、善谈、多变。你在社交场合如鱼得水，但别人可能不确定「真实的你」在什么地方——那是你保护自己的方式。',
+    '上升巨蟹：你给人的第一印象是温柔、体贴、带一点内敛的防御。你以情感温暖感化环境，像月亮反射太阳的光芒——柔和但影响深远。',
+    '上升狮子：你给人的第一印象是自信、大方、自带光环。你在人群中通常一眼可辨——不是刻意，而是天生的存在感。别人期待你的热力。',
+    '上升处女：你给人的第一印象是细致、务实、有品质感。你不张扬，但细节透露出你的讲究。别人会来找你帮忙解决问题——那是他们对你能力的默认信任。',
+    '上升天秤：你给人的第一印象是优雅、善社交、有气质的和平使者。你的礼貌和审美是天生的外交名片。人们对你的第一感觉常常是「很好相处」。',
+    '上升天蝎：你给人的第一印象是深沉、有穿透力、不轻易表露。你有一种安静的力量——别人本能感觉你不是一个可以随便对待的人。',
+    '上升射手：你给人的第一印象是开朗、乐观、充满冒险气息。你带着一种轻松幽默的态度走进房间，很快就让大家觉得你是「自己人」。',
+    '上升摩羯：你给人的第一印象是严肃、专业、可靠。你可能看起来比实际年龄要成熟——那是一种灵魂的纹路，不是岁月的刻痕。',
+    '上升水瓶：你给人的第一印象是独特、冷静、带着反传统的棱角。你不会主动迎合任何人的预期——做自己是你最先教会别人的事。',
+    '上升双鱼：你给人的第一印象是温柔、感性、带着梦幻般的气质。你容易给人类似「空灵」「治愈」的感觉——不是刻意，是一种状态。'
+  ];
+  return descs[signIndex] || '';
+}
+
+function handleCareerReading(name, sunEntry, moonEntry, chart) {
+  const saturnEntry = chart.planetEntries.find(p => p.name === 'Saturn');
+  const mc = chart.cusps[9];
+  const mcSign = getSignInfo(mc);
+  let response = '<b>' + name + '的事业分析 &#10025;</b><br><br>';
+  response += '你的<b>天顶（MC）</b>落在<b>' + mcSign.sign.symbol + ' ' + mcSign.sign.name + '</b>——这代表你在众人眼中的事业形象，也是你长期努力应该走向的方向。<br><br>';
+  const dominantEl = getDominantElement(chart.elementCounts);
+  response += KnowledgeBase.careerHints[dominantEl] + '<br><br>';
+  if (saturnEntry) {
+    response += '你的<b>土星</b>在<b>' + saturnEntry.sign.symbol + ' ' + saturnEntry.sign.name + ' 第' + saturnEntry.house + '宫</b>——这是你事业中最需要克服的课题，也往往是最终能建立专业权威的领域。土星让你在这个宫位经历考验和延迟，但回报也最扎实。';
+  }
+  response += '<br><br>你可以继续追问：「我的财富状况」「我适合什么职业方向」';
+  addChatMessage('bot', response, true);
+}
+
+function handleLoveReading(name, sunEntry, moonEntry, chart) {
+  const venusEntry = chart.planetEntries.find(p => p.name === 'Venus');
+  const marsEntry = chart.planetEntries.find(p => p.name === 'Mars');
+  const dsc = chart.cusps[6];
+  const dscSign = getSignInfo(dsc);
+  let response = '<b>' + name + '的感情分析 &#10025;</b><br><br>';
+
+  if (venusEntry) {
+    const vInterp = KnowledgeBase.planetInSign.Venus[venusEntry.signIndex];
+    response += '<b>金星 ' + venusEntry.sign.symbol + ' ' + venusEntry.sign.name + '（第' + venusEntry.house + '宫）</b>——你的爱与审美模式<br>';
+    if (vInterp) response += vInterp + '<br><br>';
+  }
+  if (marsEntry) {
+    const mInterp = KnowledgeBase.planetInSign.Mars[marsEntry.signIndex];
+    response += '<b>火星 ' + marsEntry.sign.symbol + ' ' + marsEntry.sign.name + '（第' + marsEntry.house + '宫）</b>——你的激情与欲望<br>';
+    if (mInterp) response += mInterp + '<br><br>';
+  }
+  response += '<b>下降星座（第七宫宫头）：' + dscSign.sign.symbol + ' ' + dscSign.sign.name + '</b><br>';
+  response += '下降星座描述了你在伴侣关系中容易吸引的类型，以及你对「另一半」的无意识期待。' + dscSign.sign.name + '的特质在你的伴侣身上常常有所体现。<br><br>';
+  const moonEl = moonEntry.sign.element;
+  response += KnowledgeBase.lovePatterns[moonEl] || '';
+  response += '<br><br>你可以继续追问：「我和什么星座最配」「我的感情相位有哪些」';
+  addChatMessage('bot', response, true);
+}
+
+function handleMoneyReading(name, chart) {
+  const h2Cusp = chart.cusps[1];
+  const h2Sign = getSignInfo(h2Cusp);
+  const h8Cusp = chart.cusps[7];
+  const h8Sign = getSignInfo(h8Cusp);
+  let response = '<b>' + name + '的财富分析 &#10025;</b><br><br>';
+  response += '你的<b>第二宫</b>（个人财富）宫头落在<b>' + h2Sign.sign.symbol + ' ' + h2Sign.sign.name + '</b>。';
+  response += '第二宫的星座揭示了你赚钱的方式和对待个人资源的态度。<br><br>';
+  response += '你的<b>第八宫</b>（共享资源、投资、债务）宫头落在<b>' + h8Sign.sign.symbol + ' ' + h8Sign.sign.name + '</b>。';
+  response += '第八宫描述了你和他人共享资源（包括伴侣收入、继承、投资）的模式。';
+  addChatMessage('bot', response, true);
+}
+
+function handleHealthReading(name, chart) {
+  const h6Cusp = chart.cusps[5];
+  const h6Sign = getSignInfo(h6Cusp);
+  let response = '<b>' + name + '的健康分析 &#10025;</b><br><br>';
+  response += '你的<b>第六宫</b>（日常与健康）宫头落在<b>' + h6Sign.sign.symbol + ' ' + h6Sign.sign.name + '</b>。<br>';
+  response += '第六宫和你每天的作息、工作节奏、健康习惯相关——宫头所在星座暗示了需要特别关注的健康领域。<br><br>';
+  const hints = [
+    '白羊座第六宫注意头部、偏头痛、急性伤害。',
+    '金牛座第六宫注意喉咙、颈部、饮食过量的问题。',
+    '双子座第六宫注意心肺、焦虑、神经系统保养。',
+    '巨蟹座第六宫注意情绪性进食、肠胃、乳腺。',
+    '狮子座第六宫注意心脏、脊椎，别忘了休息。',
+    '处女座第六宫你有高度健康意识，但谨防过度焦虑和肠道敏感。',
+    '天秤座第六宫注意腰部肾脏和体态平衡。',
+    '天蝎座第六宫注意排毒、泌尿系统和压力管理。',
+    '射手座第六宫注意肝脏、臀部和大腿——别忽略适度休息。',
+    '摩羯座第六宫注意骨骼、牙齿和关节炎——及早养成好习惯。',
+    '水瓶座第六宫注意循环系统、小腿和事故防范。',
+    '双鱼座第六宫注意免疫系统、足部和精神疲劳。'
+  ];
+  response += hints[h6Sign.signIndex] || '关注身体的信号，定期体检，保持良好的作息。';
+  addChatMessage('bot', response, true);
+}
+
+function handleAspectReading(chart) {
+  let response = '<b>你的重要相位解读 &#10025;</b><br><br>';
+  if (chart.aspects.length === 0) {
+    response += '你的星盘中目前没有发现强烈的主要相位。但这不意味着没有故事——四分相和合相之外的微妙互动同样塑造你的性格。<br><br>';
+  } else {
+    const namedPlanets = { 'Sun': '太阳', 'Moon': '月亮', 'Mercury': '水星', 'Venus': '金星', 'Mars': '火星', 'Jupiter': '木星', 'Saturn': '土星', 'Uranus': '天王星', 'Neptune': '海王星', 'Pluto': '冥王星', 'NorthNode': '北交点' };
+    for (const aspect of chart.aspects) {
+      let found = false;
+      for (const kb of KnowledgeBase.aspectMeanings) {
+        const aMatch = (kb.planetA === aspect.planetA && kb.planetB === aspect.planetB) ||
+                       (kb.planetA === aspect.planetB && kb.planetB === aspect.planetA);
+        if (aMatch && kb.aspect === aspect.aspectType) {
+          response += '<b>' + (namedPlanets[aspect.planetA] || aspect.planetA) + ' ' + aspect.aspectType + ' ' + (namedPlanets[aspect.planetB] || aspect.planetB) + '</b>（容许度' + aspect.orb + '°）<br>' + kb.meaning + '<br><br>';
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        const natureDesc = aspect.aspectNature === 'harmonious' ? '和谐相位通常意味着这两个行星的能量在合作——使用它们的正面力量。' : '挑战相位代表内在张力——但张力往往也是成长的推动力。';
+        response += '<b>' + (namedPlanets[aspect.planetA] || aspect.planetA) + ' ' + aspect.aspectType + ' ' + (namedPlanets[aspect.planetB] || aspect.planetB) + '</b>（容许度' + aspect.orb + '°）<br>' + natureDesc + '<br><br>';
+      }
+    }
+  }
+  addChatMessage('bot', response, true);
+}
+
+function handleVagueLove() {
+  const sunEntry = currentChartData.planetEntries.find(p => p.name === 'Sun');
+  const name = document.getElementById('fName').value || '你';
+  let response = name + '，你想了解感情方面的情况，让我帮你聚焦一下：<br><br>';
+  response += '你的太阳在<b>' + sunEntry.sign.symbol + sunEntry.sign.name + '</b>，你是想了解：';
+  addChatMessage('bot', response);
+
+  const msgDiv = document.getElementById('chatMessages').lastElementChild;
+  const suggestions = document.createElement('div');
+  suggestions.className = 'chat-suggestions';
+  ['我的感情模式', '我和什么星座最配', '我适合什么样的伴侣', '我的金星和火星解读'].forEach(text => {
+    const btn = document.createElement('button');
+    btn.className = 'chat-suggestion';
+    btn.textContent = text;
+    btn.onclick = function() { processChatInput(text, true); };
+    suggestions.appendChild(btn);
+  });
+  msgDiv.appendChild(suggestions);
+}
+
+function getDominantElement(elementCounts) {
+  let max = 0;
+  let dominant = 'mixed';
+  for (const [element, count] of Object.entries(elementCounts)) {
+    if (count > max) { max = count; dominant = element; }
+  }
+  if (max < 4) return 'mixed';
+  return dominant;
+}
+
+function getElementBalanceDesc(elementCounts) {
+  const dominant = getDominantElement(elementCounts);
+  const descs = {
+    fire: '火元素突出——你靠直觉和热情驱动。行动力强，但也需要土元素的稳定来落地。',
+    earth: '土元素突出——你务实可靠。适当加入火和风的能量，让生活多些灵动的色彩。',
+    air: '风元素突出——思维和沟通是你的长项。发展一些土或水能帮你更好地落地情感连接。',
+    water: '水元素突出——直觉和共情是你的天赋。注意用火或风的能量平衡，避免过度沉浸在情绪海洋中。',
+    mixed: '元素分布相对均衡——你可以在不同情境下调用不同类型的能量，这份多元性是珍贵的天赋。'
+  };
+  return descs[dominant] || descs.mixed;
+}
+
+// ──────────────────────────────────────────────
+// TAB SWITCHING
+// ──────────────────────────────────────────────
+function initTabs() {
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      const target = this.getAttribute('data-tab');
+      document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+      document.getElementById('tab-' + target).classList.add('active');
+    });
+  });
+}
+
+// ──────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────
+function init() {
+  initTabs();
+  const dateInput = document.getElementById('fDate');
+  if (!dateInput.value) dateInput.value = '1995-06-15';
+  const timeInput = document.getElementById('fTime');
+  if (!timeInput.value) timeInput.value = '14:30';
+}
+
+document.addEventListener('DOMContentLoaded', init);
+window.onGenerate = onGenerate;
+window.sendChat = sendChat;
+window.onChatKeydown = onChatKeydown;
+window.processChatInput = processChatInput;
+</script>
+</body>
+</html>
